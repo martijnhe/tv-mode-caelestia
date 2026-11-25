@@ -1,0 +1,11 @@
+{
+    "desktopMonitors": ["DP-1", "DP-3"],
+    "tv": "HDMI-A-1",
+    "tvMode": "3840x2160@60",
+    "tvScale": 1,
+    "tvAudioMatch": "SAMSUNG",
+    "closeWindows": true,
+    "keepClassRegex": "caelestia|quickshell|steam",
+    "tvInDesktop": false,
+    "steamCommand": "steam -gamepadui"
+}

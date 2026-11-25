@@ -1,0 +1,24 @@
+{
+    "name": "tvmode",
+    "author": "martijnhe",
+    "version": "1.0.0",
+    "description": "Switch between desktop monitors and the TV (picture, sound, Steam Big Picture).",
+    "homepage": "https://github.com/martijnhe/tv-mode-caelestia",
+    "requires": ">=2.5.0",
+    "entryPoints": [
+        {
+            "type": "bar-entry",
+            "source": "BarEntry.qml",
+            "properties": {
+                "name": "tvmode"
+            }
+        },
+        {
+            "type": "bar-popout",
+            "source": "TvModePopout.qml",
+            "properties": {
+                "entry": "tvmode"
+            }
+        }
+    ]
+}
