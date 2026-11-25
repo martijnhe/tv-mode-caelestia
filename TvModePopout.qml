@@ -221,10 +221,9 @@ ColumnLayout {
             TvDropdown {
                 label: qsTr("Steam")
                 icon: "sports_esports"
-                options: ["steam -gamepadui", "gamescope -f -- steam -gamepadui", "steam -bigpicture", "true"]
+                options: ["steam -gamepadui", "steam -bigpicture", "true"]
                 optionLabel: v => ({
                         "steam -gamepadui": qsTr("Big Picture"),
-                        "gamescope -f -- steam -gamepadui": qsTr("Big Picture in gamescope"),
                         "steam -bigpicture": qsTr("Big Picture (old)"),
                         "true": qsTr("Don't start Steam")
                     })[v] ?? v
