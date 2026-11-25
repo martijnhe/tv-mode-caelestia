@@ -30,6 +30,8 @@ if mode == "--remove":
     content.write_text(text)
     service.unlink(missing_ok=True)
     popout.unlink(missing_ok=True)
+    for helper in ("TvSection", "TvToggle", "TvDropdown"):
+        (popout.parent / f"{helper}.qml").unlink(missing_ok=True)
     print("Removed TV Mode from the shell")
     sys.exit()
 
@@ -66,6 +68,8 @@ content.write_text(text)
 service.write_text(f"{M}: TV mode service, from {src}\n" + (src / "TvMode.qml").read_text())
 pop = (src / "TvModePopout.qml").read_text().replace("import martijnhe.tvmode\n", "")
 popout.write_text(f"{M}: TV mode tab, from {src}\n" + pop)
+for helper in ("TvSection", "TvToggle", "TvDropdown"):
+    (popout.parent / f"{helper}.qml").write_text(f"// {M}: helper for TvModePopout\n" + (src / f"{helper}.qml").read_text())
 
 toggles = conf / "plugin-toggles.json"
 t = json.loads(toggles.read_text()) if toggles.exists() else {}

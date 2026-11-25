@@ -60,6 +60,8 @@ Both files are generated on each switch. You don't need to create them first: `p
 
 ### 4. Write your settings
 
+You can also skip this and pick everything from the shell's settings page after step 6.
+
 ```bash
 mkdir -p ~/.config/caelestia
 cp tvmode.example.json ~/.config/caelestia/tvmode.json
@@ -118,7 +120,7 @@ This adds a TV icon to the bar. Hover it for the popout with the **TV Mode** / *
 ./shell-patch.sh --remove   # takes it out again
 ```
 
-The settings page writes the same `~/.config/caelestia/tvmode.json` the scripts read, so changes apply on the next switch.
+The ⚙ settings page uses dropdowns filled from your hardware: the TV output, its resolutions (the best 12 it reports, plus `preferred`), scale, which HDMI audio device to switch to (or "Don't switch audio"), switches for which screens go off in TV mode, and how to start Steam. It writes the same `~/.config/caelestia/tvmode.json` the scripts read, so changes apply on the next switch. Turn the TV on before opening the settings, so its audio device name shows up in the list.
 
 ### Keybinds (optional)
 
@@ -161,8 +163,10 @@ HDMI and DisplayPort audio comes from the graphics card's audio device. That dev
 | `scripts/tv-mode.sh`, `scripts/desktop-mode.sh` | the two actions |
 | `scripts/common.sh` | settings loading and helpers |
 | `scripts/detect.sh` | prints monitor, mode and audio port names |
+| `scripts/hardware.sh` | the same data as JSON, for the settings dropdowns |
 | `TvMode.qml` | shell service: runs the scripts, tracks the mode, holds the settings |
 | `TvModePopout.qml`, `BarEntry.qml` | popout / dashboard tab and bar icon |
+| `TvDropdown.qml`, `TvToggle.qml`, `TvSection.qml` | settings rows used by the popout |
 | `manifest.json`, `install.sh`, `uninstall.sh` | plugin-system install |
 | `shell-patch.sh` | install for a patched shell without a plugin loader |
 | `tvmode.example.json` | example settings |

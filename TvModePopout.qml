@@ -2,8 +2,10 @@ pragma ComponentBehavior: Bound
 
 import QtQuick
 import QtQuick.Layouts
+import Quickshell
 import Caelestia.Config
 import qs.components
+import qs.components.containers
 import qs.components.controls
 import qs.services
 import martijnhe.tvmode
@@ -22,14 +24,24 @@ ColumnLayout {
     // qmllint enable missing-property
 
     property bool showSettings: false
+    readonly property var settings: TvMode.settings
 
-    width: 320
-    implicitWidth: 320
+    width: 340
+    implicitWidth: 340
     spacing: Tokens.spacing.small
+
+    Component.onCompleted: TvMode.refreshHardware()
+    onShowSettingsChanged: if (showSettings) TvMode.refreshHardware()
 
     function closePopout(): void {
         if (popoutState)
             popoutState.hasCurrent = false;
+    }
+
+    function outputLabel(name: string): string {
+        const o = TvMode.outputs.find(m => m.name === name);
+        const desc = o?.description?.replace(/\s+\S*\d\S*$/, "") ?? ""; // drop the serial number
+        return desc ? `${name} · ${desc}` : name;
     }
 
     // Header
@@ -57,9 +69,10 @@ ColumnLayout {
 
             StyledText {
                 Layout.fillWidth: true
-                text: TvMode.busy ? qsTr("Switching…") : TvMode.tvOn ? qsTr("On · %1").arg(TvMode.settings.tv) : qsTr("Desktop · %1").arg(TvMode.settings.desktopMonitors.join(", "))
+                text: TvMode.busy ? qsTr("Switching…") : TvMode.tvOn ? qsTr("On · %1").arg(root.settings.tv) : qsTr("Desktop · %1").arg(root.settings.desktopMonitors.join(", "))
                 color: Colours.palette.m3onSurfaceVariant
                 font: Tokens.font.body.small
+                elide: Text.ElideRight
             }
         }
 
@@ -107,59 +120,111 @@ ColumnLayout {
     }
 
     // Settings
-    ColumnLayout {
+    StyledFlickable {
         Layout.fillWidth: true
+        Layout.preferredHeight: Math.min(settingsColumn.implicitHeight, 380)
         visible: root.showSettings
-        spacing: Tokens.spacing.small
+        contentHeight: settingsColumn.implicitHeight
+        clip: true
 
-        component Field: StyledTextField {
-            Layout.fillWidth: true
-            topPadding: Tokens.padding.small + filledOffset
-            bottomPadding: Tokens.padding.small + supportingTextOffset - filledOffset
-        }
+        ColumnLayout {
+            id: settingsColumn
 
-        Field {
-            placeholderText: qsTr("Desktop monitors (space separated)")
-            text: TvMode.settings.desktopMonitors.join(" ")
-            onEditingFinished: TvMode.settings.desktopMonitors = text.split(/[\s,]+/).filter(s => s)
-        }
+            width: parent.width
+            spacing: Tokens.spacing.small
 
-        Field {
-            placeholderText: qsTr("TV output")
-            text: TvMode.settings.tv
-            onEditingFinished: TvMode.settings.tv = text.trim()
-        }
-
-        Field {
-            placeholderText: qsTr("TV mode, e.g. 3840x2160@60")
-            text: TvMode.settings.tvMode
-            onEditingFinished: TvMode.settings.tvMode = text.trim()
-        }
-
-        Field {
-            placeholderText: qsTr("TV audio match (name from EDID)")
-            text: TvMode.settings.tvAudioMatch
-            onEditingFinished: TvMode.settings.tvAudioMatch = text.trim()
-        }
-
-        Field {
-            placeholderText: qsTr("Windows to keep open (class regex)")
-            text: TvMode.settings.keepClassRegex
-            onEditingFinished: TvMode.settings.keepClassRegex = text.trim()
-        }
-
-        RowLayout {
-            Layout.fillWidth: true
-            Layout.rightMargin: Tokens.padding.extraSmall
-
-            StyledText {
-                Layout.fillWidth: true
-                text: qsTr("Close desktop windows")
+            TvSection {
+                text: qsTr("TV")
             }
 
-            StyledSwitch {
-                checked: TvMode.settings.closeWindows
-                onToggled: TvMode.settings.closeWindows = checked
+            TvDropdown {
+                label: qsTr("Output")
+                icon: "tv"
+                options: TvMode.outputs.map(m => m.name)
+                optionLabel: name => root.outputLabel(name)
+                buttonText: name => name
+                current: root.settings.tv
+                onPicked: value => {
+                    root.settings.tv = value;
+                    root.settings.desktopMonitors = root.settings.desktopMonitors.filter(m => m !== value);
+                }
+            }
+
+            TvDropdown {
+                label: qsTr("Resolution")
+                icon: "aspect_ratio"
+                options: ["preferred", ...TvMode.modesOf(root.settings.tv).slice(0, 12)]
+                current: root.settings.tvMode
+                onPicked: value => root.settings.tvMode = value
+            }
+
+            TvDropdown {
+                label: qsTr("Scale")
+                icon: "zoom_in"
+                options: ["1", "1.25", "1.5", "1.75", "2"]
+                optionLabel: v => `${v}×`
+                current: String(root.settings.tvScale)
+                onPicked: value => root.settings.tvScale = Number(value)
+            }
+
+            TvDropdown {
+                label: qsTr("Sound")
+                subtext: qsTr("Device name on the HDMI audio port")
+                icon: "volume_up"
+                options: [...new Set([...TvMode.audioNames, root.settings.tvAudioMatch].filter(s => s && s !== "none")), "none"]
+                optionLabel: v => v === "none" ? qsTr("Don't switch audio") : v
+                current: root.settings.tvAudioMatch
+                onPicked: value => root.settings.tvAudioMatch = value
+            }
+
+            TvSection {
+                text: qsTr("Turned off in TV mode")
+            }
+
+            Repeater {
+                model: TvMode.outputs.filter(m => m.name !== root.settings.tv)
+
+                TvToggle {
+                    required property var modelData
+
+                    label: root.outputLabel(modelData.name)
+                    isOn: root.settings.desktopMonitors.includes(modelData.name)
+                    onToggled: value => {
+                        const rest = root.settings.desktopMonitors.filter(m => m !== modelData.name);
+                        root.settings.desktopMonitors = value ? [...rest, modelData.name] : rest;
+                    }
+                }
+            }
+
+            TvSection {
+                text: qsTr("Behaviour")
+            }
+
+            TvToggle {
+                label: qsTr("Close desktop windows")
+                isOn: root.settings.closeWindows
+                onToggled: value => root.settings.closeWindows = value
+            }
+
+            TvToggle {
+                label: qsTr("Keep TV on in desktop mode")
+                isOn: root.settings.tvInDesktop
+                onToggled: value => root.settings.tvInDesktop = value
+            }
+
+            TvDropdown {
+                label: qsTr("Steam")
+                icon: "sports_esports"
+                options: ["steam -gamepadui", "gamescope -f -- steam -gamepadui", "steam -bigpicture", "true"]
+                optionLabel: v => ({
+                        "steam -gamepadui": qsTr("Big Picture"),
+                        "gamescope -f -- steam -gamepadui": qsTr("Big Picture in gamescope"),
+                        "steam -bigpicture": qsTr("Big Picture (old)"),
+                        "true": qsTr("Don't start Steam")
+                    })[v] ?? v
+                current: root.settings.steamCommand
+                menuOnTop: true
+                onPicked: value => root.settings.steamCommand = value
             }
         }
     }

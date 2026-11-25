@@ -33,6 +33,41 @@ Singleton {
         setMode(tvOn ? "desktop" : "tv");
     }
 
+    // Hardware lists for the settings dropdowns: every output (on or off) with its modes,
+    // and the device names on the HDMI/DP audio ports (from EDID, only while that screen is on).
+    property var outputs: [] // [{ name, description, modes: ["3840x2160@60", ...] }]
+    property list<string> audioNames: []
+
+    function refreshHardware(): void {
+        hardware.running = true;
+    }
+
+    function modesOf(output: string): list<string> {
+        const o = outputs.find(m => m.name === output);
+        return o ? o.modes : [];
+    }
+
+    Process {
+        id: hardware
+
+        command: [`${root.scriptDir}/hardware.sh`]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                const lines = text.trim().split("\n");
+                try {
+                    root.outputs = JSON.parse(lines[0] || "[]");
+                } catch (e) {
+                    root.outputs = [];
+                }
+                try {
+                    root.audioNames = JSON.parse(lines[1] || "[]");
+                } catch (e) {
+                    root.audioNames = [];
+                }
+            }
+        }
+    }
+
     Process {
         id: runner
 
