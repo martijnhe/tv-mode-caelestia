@@ -84,5 +84,6 @@ if pgrep -x steam >/dev/null; then
 else
   setsid -f sh -c "$want" >/dev/null 2>&1
 fi
+[[ $want == gamescope* ]] && fullscreen_gamescope
 
 log "TV mode on"

@@ -104,6 +104,28 @@ steam_command() {
   printf '%s' "${cmd/gamescope/gamescope $size}"
 }
 
+# gamescope opens as an ordinary window, so Hyprland tiles it next to anything else on the TV
+# and the game is squeezed into part of the screen. Waits (in the background, up to a minute)
+# for its window and makes it fullscreen. Lua config first, then the hyprland.conf dispatchers.
+fullscreen_gamescope() {
+  (
+    for _ in $(seq 1 120); do
+      addr=$(hyprctl clients -j 2>/dev/null | jq -r 'first(.[] | select(.class == "gamescope") | .address) // empty')
+      if [[ -n $addr ]]; then
+        [[ $(hyprctl clients -j | jq -r --arg a "$addr" '.[] | select(.address == $a) | .fullscreen') == 0 ]] || exit 0
+        out=$(hyprctl dispatch "hl.dsp.window.fullscreen({ mode = \"fullscreen\", window = \"address:$addr\" })" 2>&1)
+        if [[ $out != ok* ]]; then
+          hyprctl dispatch focuswindow "address:$addr" >/dev/null 2>&1
+          hyprctl dispatch fullscreen 0 >/dev/null 2>&1
+        fi
+        exit 0
+      fi
+      sleep 0.5
+    done
+  ) >/dev/null 2>&1 &
+  disown 2>/dev/null || true
+}
+
 tv_active() { # TV enabled with a real mode
   hyprctl monitors -j | jq -e --arg tv "$TV" '.[] | select(.name == $tv and .disabled == false and .width > 0)' >/dev/null
 }
