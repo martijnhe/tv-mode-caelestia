@@ -7,5 +7,6 @@
     "closeWindows": true,
     "keepClassRegex": "caelestia|quickshell|steam",
     "tvInDesktop": false,
-    "steamCommand": "steam -gamepadui"
+    "steamCommand": "steam -gamepadui",
+    "keepAwake": true
 }

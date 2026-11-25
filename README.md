@@ -2,7 +2,7 @@
 
 One click to move your [Caelestia](https://github.com/caelestia-dots/shell) / Hyprland desktop to the TV (picture, sound and Steam Big Picture), and one click to go back.
 
-- **TV Mode**: only the TV is on (no mirroring), your desktop monitors turn off, audio moves to the TV, desktop windows close, and Steam opens in Big Picture.
+- **TV Mode**: only the TV is on (no mirroring), your desktop monitors turn off, audio moves to the TV, desktop windows close, Steam opens in Big Picture, and the PC stays awake (no lock screen, no screen blanking, no suspend).
 - **Desktop Mode**: Steam closes, your monitors come back in their normal layout, the TV's output turns off, and audio goes back to where it was.
 
 The logic is in plain bash scripts in `scripts/`, so you can run and debug them from a terminal. The shell part only calls them.
@@ -78,6 +78,7 @@ $EDITOR ~/.config/caelestia/tvmode.json
 | `closeWindows` | `true` | close desktop windows when entering TV mode |
 | `keepClassRegex` | `"caelestia\|quickshell\|steam"` | window classes that stay open (regex, case-insensitive) |
 | `tvInDesktop` | `false` | `true` keeps the TV on as an extra screen in desktop mode |
+| `keepAwake` | `true` | while in TV mode: turn on the shell's keep-awake (no lock screen or screen blanking) and block suspend with `systemd-inhibit`. Desktop mode undoes both; a keep-awake you'd already turned on yourself stays on |
 | `steamCommand` | `"steam -gamepadui"` | how to start Steam if it isn't running. Try `gamescope -W 3840 -H 2160 -f -- steam -gamepadui` for a more console-like session |
 
 Anything you leave out uses the default from `scripts/common.sh`.
@@ -154,6 +155,7 @@ HDMI and DisplayPort audio comes from the graphics card's audio device. That dev
 - **Names changed**: output names like `HDMI-A-1` depend on the port you use. Run `detect.sh` again after rewiring.
 - **HDMI switch / second device**: the scripts only control the PC's outputs. Switch the TV or the HDMI switch to the PC input yourself.
 - **Closing windows**: windows get a normal close request, so apps can still ask to save. Add anything you want kept open to `keepClassRegex`, or set `closeWindows` to `false`.
+- **Lock screen still shows up**: check `systemd-inhibit --list` shows a "TV Mode" entry and `caelestia shell idleInhibitor isEnabled` says `true` while in TV mode. Other idle daemons (hypridle, swayidle) need to respect Wayland idle inhibitors; hypridle does by default.
 - **Logs**: the scripts print `[tv-mode] ...` lines to stderr. State and saved audio are in `~/.cache/tv-mode/`.
 
 ## Files

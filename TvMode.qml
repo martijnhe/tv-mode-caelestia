@@ -120,6 +120,7 @@ Singleton {
             property string keepClassRegex: "caelestia|quickshell|steam"
             property bool tvInDesktop: false
             property string steamCommand: "steam -gamepadui"
+            property bool keepAwake: true
         }
     }
 }

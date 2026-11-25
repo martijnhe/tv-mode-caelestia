@@ -22,6 +22,7 @@ CLOSE_WINDOWS=$(conf .closeWindows true)
 KEEP_CLASS_REGEX=$(conf .keepClassRegex 'caelestia|quickshell|steam')
 TV_IN_DESKTOP=$(conf .tvInDesktop false)        # keep the TV on as an extra screen in desktop mode
 STEAM_CMD=$(conf .steamCommand 'steam -gamepadui')
+KEEP_AWAKE=$(conf .keepAwake true)               # no lock screen, screen blanking or suspend while in TV mode
 
 log() { printf '[tv-mode] %s\n' "$*" >&2; }
 notify() { command -v notify-send >/dev/null && notify-send -a "TV Mode" -i video-display "$@" || true; }
@@ -56,6 +57,33 @@ apply_layout() { # apply_layout tv|desktop
 
 layout_hooked() { # is the override file loaded by the Hyprland config?
   grep -rqs 'tvmode-monitors' "${XDG_CONFIG_HOME:-$HOME/.config}/hypr" "${XDG_CONFIG_HOME:-$HOME/.config}/caelestia/hypr-user.lua" "${XDG_CONFIG_HOME:-$HOME/.config}/caelestia/hypr-user.conf"
+}
+
+# Keep awake: the shell's own idle inhibitor (stops its lock screen and DPMS timeouts) plus a
+# logind inhibitor (stops suspend from anything else). The inhibitor's previous state is saved, so
+# a keep-awake you turned on yourself stays on after desktop mode.
+shell_ipc() { # shell_ipc <target> <function>
+  if command -v caelestia >/dev/null; then caelestia shell "$@" 2>/dev/null
+  else qs ipc -c caelestia call "$@" 2>/dev/null; fi
+}
+
+awake_on() {
+  [[ -f $CACHE/inhibitor-was.txt ]] || shell_ipc idleInhibitor isEnabled >"$CACHE/inhibitor-was.txt"
+  shell_ipc idleInhibitor enable >/dev/null
+  if [[ ! -s $CACHE/inhibit.pid ]] || ! kill -0 "$(cat "$CACHE/inhibit.pid")" 2>/dev/null; then
+    setsid -f sh -c 'echo $$ >"$1"; exec systemd-inhibit --what=sleep:idle --who="TV Mode" --why="TV mode is on" --mode=block sleep infinity' _ "$CACHE/inhibit.pid" >/dev/null 2>&1
+  fi
+}
+
+awake_off() {
+  if [[ -f $CACHE/inhibitor-was.txt ]]; then
+    [[ $(cat "$CACHE/inhibitor-was.txt") == true ]] || shell_ipc idleInhibitor disable >/dev/null
+    rm -f "$CACHE/inhibitor-was.txt"
+  fi
+  if [[ -s $CACHE/inhibit.pid ]]; then
+    pkill -P "$(cat "$CACHE/inhibit.pid")" 2>/dev/null; kill "$(cat "$CACHE/inhibit.pid")" 2>/dev/null
+    rm -f "$CACHE/inhibit.pid"
+  fi
 }
 
 tv_active() { # TV enabled with a real mode

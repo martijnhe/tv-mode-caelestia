@@ -207,6 +207,12 @@ ColumnLayout {
             }
 
             TvToggle {
+                label: qsTr("Keep PC awake in TV mode")
+                isOn: root.settings.keepAwake
+                onToggled: value => root.settings.keepAwake = value
+            }
+
+            TvToggle {
                 label: qsTr("Keep TV on in desktop mode")
                 isOn: root.settings.tvInDesktop
                 onToggled: value => root.settings.tvInDesktop = value

@@ -26,6 +26,7 @@ if ! tv_active; then
   exit 1
 fi
 state tv
+[[ $KEEP_AWAKE == true ]] && awake_on
 
 # 2. Audio. HDMI/DP audio is a port on the GPU's audio card, and that card often exposes only one
 #    output at a time, so switch the card to the TV's profile instead of just picking a sink.

@@ -13,6 +13,7 @@ fi
 # 2. Screens: your normal config layout, TV off (unless tvInDesktop)
 apply_layout desktop
 state desktop
+awake_off
 
 # 3. Audio: card profile first (that brings the monitor's sink back), then the default sink
 if [[ -f $CACHE/desktop-profile.txt ]]; then
