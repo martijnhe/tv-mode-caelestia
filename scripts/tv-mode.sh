@@ -65,10 +65,24 @@ if [[ $CLOSE_WINDOWS == true ]]; then
 fi
 
 # 4. Steam Big Picture
+# A Steam left running inside a gamescope started with other settings (an older version of this
+# script, or a TV mode that changed) keeps the old size for games: it is closed and started again.
+want=$(steam_command)
+gs_pid=$(pgrep -o -x gamescope)
+if [[ -n $gs_pid && $want == gamescope* ]] && pgrep -x steam >/dev/null; then
+  have=$(tr '\0' ' ' <"/proc/$gs_pid/cmdline" 2>/dev/null); have=${have% }
+  if [[ $have != "$want" ]]; then
+    log "gamescope runs with other settings ($have); restarting Steam"
+    steam -shutdown >/dev/null 2>&1 &
+    for _ in $(seq 1 60); do pgrep -x steam >/dev/null || break; sleep 0.5; done
+    for _ in $(seq 1 20); do kill -0 "$gs_pid" 2>/dev/null || break; sleep 0.5; done
+    kill "$gs_pid" 2>/dev/null || true
+  fi
+fi
 if pgrep -x steam >/dev/null; then
   setsid -f steam steam://open/bigpicture >/dev/null 2>&1
 else
-  setsid -f sh -c "$(steam_command)" >/dev/null 2>&1
+  setsid -f sh -c "$want" >/dev/null 2>&1
 fi
 
 log "TV mode on"
