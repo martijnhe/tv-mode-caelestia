@@ -86,6 +86,24 @@ awake_off() {
   fi
 }
 
+# gamescope without a size tells games the screen is 1280x720, so they can't pick a higher
+# resolution. A gamescope command with no size flags of its own gets the TV's size and refresh
+# (from the running TV, else from tvMode). Flags you set yourself are left alone.
+steam_command() {
+  local cmd=$STEAM_CMD w h r
+  [[ $cmd =~ ^[[:space:]]*gamescope([[:space:]]|$) ]] || { printf '%s' "$cmd"; return; }
+  [[ " $cmd " =~ [[:space:]](-[wWhH]|--nested-width|--nested-height|--output-width|--output-height)[[:space:]=] ]] && { printf '%s' "$cmd"; return; }
+  read -r w h r < <(hyprctl monitors -j 2>/dev/null | jq -r --arg tv "$TV" \
+    'first(.[] | select(.name == $tv and .disabled == false and .width > 0)) | "\(.width) \(.height) \(.refreshRate | round)"')
+  if [[ -z $w && $TV_MODE =~ ^([0-9]+)x([0-9]+)(@([0-9.]+))? ]]; then
+    w=${BASH_REMATCH[1]} h=${BASH_REMATCH[2]} r=${BASH_REMATCH[4]%.*}
+  fi
+  [[ -n $w && -n $h ]] || { printf '%s' "$cmd"; return; }
+  local size="-W $w -H $h -w $w -h $h"
+  [[ -n $r && ! " $cmd " =~ [[:space:]](-r|--nested-refresh)[[:space:]=] ]] && size+=" -r $r"
+  printf '%s' "${cmd/gamescope/gamescope $size}"
+}
+
 tv_active() { # TV enabled with a real mode
   hyprctl monitors -j | jq -e --arg tv "$TV" '.[] | select(.name == $tv and .disabled == false and .width > 0)' >/dev/null
 }

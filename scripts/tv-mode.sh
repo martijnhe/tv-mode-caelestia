@@ -68,7 +68,7 @@ fi
 if pgrep -x steam >/dev/null; then
   setsid -f steam steam://open/bigpicture >/dev/null 2>&1
 else
-  setsid -f sh -c "$STEAM_CMD" >/dev/null 2>&1
+  setsid -f sh -c "$(steam_command)" >/dev/null 2>&1
 fi
 
 log "TV mode on"

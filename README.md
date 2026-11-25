@@ -79,7 +79,7 @@ $EDITOR ~/.config/caelestia/tvmode.json
 | `keepClassRegex` | `"caelestia\|quickshell\|steam"` | window classes that stay open (regex, case-insensitive) |
 | `tvInDesktop` | `false` | `true` keeps the TV on as an extra screen in desktop mode |
 | `keepAwake` | `true` | while in TV mode: turn on the shell's keep-awake (no lock screen or screen blanking) and block suspend with `systemd-inhibit`. Desktop mode undoes both; a keep-awake you'd already turned on yourself stays on |
-| `steamCommand` | `"steam -gamepadui"` | how to start Steam if it isn't running. Try `gamescope -W 3840 -H 2160 -f -- steam -gamepadui` for a more console-like session |
+| `steamCommand` | `"steam -gamepadui"` | how to start Steam if it isn't running. Try `gamescope -f -- steam -gamepadui` for a more console-like session: TV mode adds the TV's resolution and refresh rate (`-W -H -w -h -r`), so games can pick 4K instead of gamescope's default 1280x720. Size flags you add yourself are kept |
 
 Anything you leave out uses the default from `scripts/common.sh`.
 
