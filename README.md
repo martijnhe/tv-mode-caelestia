@@ -141,6 +141,14 @@ bind = SUPER ALT, D, exec, ~/.config/caelestia/plugins/tvmode/scripts/desktop-mo
 
 (`install.sh` and `shell-patch.sh` create the `~/.config/caelestia/plugins/tvmode` link. Without them, use the path where you cloned the repo.)
 
+### Stream Deck (optional)
+
+With [OpenDeck](https://github.com/nekename/OpenDeck) you can put TV Mode on a Stream Deck key: a toggle key, a key that shows the current mode, and the same settings in OpenDeck's side panel. See [`opendeck/`](opendeck/README.md).
+
+```bash
+./opendeck/install.sh   # then restart OpenDeck
+```
+
 ## How the audio switch works
 
 HDMI and DisplayPort audio comes from the graphics card's audio device. That device often has one port per connector but plays to **one at a time** (one card profile). So the TV's sink usually doesn't exist until you switch the card to it, and picking a sink with "hdmi" in its name may just pick your monitor's speakers.
@@ -172,3 +180,4 @@ HDMI and DisplayPort audio comes from the graphics card's audio device. That dev
 | `manifest.json`, `install.sh`, `uninstall.sh` | plugin-system install |
 | `shell-patch.sh` | install for a patched shell without a plugin loader |
 | `tvmode.example.json` | example settings |
+| `opendeck/` | OpenDeck (Stream Deck) plugin |

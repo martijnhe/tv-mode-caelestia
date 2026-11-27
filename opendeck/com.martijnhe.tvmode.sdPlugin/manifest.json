@@ -1,0 +1,66 @@
+{
+  "Name": "TV Mode",
+  "Description": "Switch the Caelestia TV mode on and off, and show which mode is active.",
+  "Author": "martijnhe",
+  "Version": "1.1.0",
+  "Icon": "icons/plugin",
+  "Category": "TV Mode",
+  "CategoryIcon": "icons/plugin",
+  "CodePathLin": "index.js",
+  "OS": [
+    {
+      "Platform": "linux",
+      "MinimumVersion": "5.0"
+    }
+  ],
+  "Software": {
+    "MinimumVersion": "2.13.0"
+  },
+  "SDKVersion": 2,
+  "Actions": [
+    {
+      "UUID": "com.martijnhe.tvmode.toggle",
+      "Name": "Toggle TV Mode",
+      "Icon": "icons/tv",
+      "Tooltip": "Switch between TV mode and desktop mode",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "icons/desktop",
+          "Name": "Desktop"
+        },
+        {
+          "Image": "icons/tv",
+          "Name": "TV"
+        }
+      ],
+      "PropertyInspectorPath": "pi/settings.html"
+    },
+    {
+      "UUID": "com.martijnhe.tvmode.status",
+      "Name": "TV Mode Status",
+      "Icon": "icons/desktop",
+      "Tooltip": "Shows whether TV mode or desktop mode is active",
+      "Controllers": [
+        "Keypad"
+      ],
+      "DisableAutomaticStates": true,
+      "States": [
+        {
+          "Image": "icons/desktop",
+          "Name": "Desktop",
+          "TitleAlignment": "bottom"
+        },
+        {
+          "Image": "icons/tv",
+          "Name": "TV",
+          "TitleAlignment": "bottom"
+        }
+      ],
+      "PropertyInspectorPath": "pi/settings.html"
+    }
+  ]
+}

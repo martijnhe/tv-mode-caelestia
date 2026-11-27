@@ -1,0 +1,162 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  * { box-sizing: border-box; }
+  :root { color-scheme: dark; }
+  body { font: 13px ui-sans-serif, system-ui, sans-serif; color: #ddd; background: #1e1e1e; margin: 0; padding: 8px 10px; overflow-x: hidden; }
+  h3 { font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: #999; margin: 14px 0 6px; }
+  h3:first-child { margin-top: 0; }
+  .row { display: flex; align-items: center; gap: 8px; margin: 6px 0; }
+  .row > label:first-child { flex: 0 0 120px; color: #bbb; }
+  .row > :not(label:first-child) { flex: 1; min-width: 0; }
+  .row > .muted { flex: 1; } .row > button#refresh { flex: 0 0 auto; }
+  input[type=text], input[type=number], select { background: #2a2a2a; color: #eee; border: 1px solid #444; border-radius: 4px; padding: 4px 6px; font: inherit; }
+  .checks label { display: block; margin: 3px 0; }
+  .check { display: flex; gap: 6px; align-items: center; margin: 5px 0 5px 128px; color: #ccc; }
+  .muted { color: #888; font-size: 11px; }
+  #status { margin-top: 10px; min-height: 1em; font-size: 12px; }
+  #status.ok { color: #7c7; } #status.err { color: #e77; }
+  button { background: #3a3a3a; color: #eee; border: 1px solid #555; border-radius: 4px; padding: 4px 10px; font: inherit; cursor: pointer; }
+</style>
+</head>
+<body>
+  <h3>TV</h3>
+  <div class="row"><label for="tv">TV output</label><select id="tv"></select></div>
+  <div class="row"><label for="tvMode">Resolution</label><select id="tvMode"></select></div>
+  <div class="row"><label for="tvScale">Scale</label><input id="tvScale" type="number" min="0.5" max="3" step="0.05"></div>
+  <div class="row"><label for="tvAudioMatch">Audio device</label><input id="tvAudioMatch" type="text" list="audioList" placeholder="part of the TV's sink name"></div>
+  <datalist id="audioList"></datalist>
+
+  <h3>Desktop</h3>
+  <div class="row"><label>Desktop monitors</label><div id="desktopMonitors" class="checks"></div></div>
+  <label class="check"><input id="tvInDesktop" type="checkbox"> Keep the TV on in desktop mode</label>
+
+  <h3>Switching to TV</h3>
+  <div class="row"><label for="steamCommand">Launch</label><input id="steamCommand" type="text"></div>
+  <label class="check"><input id="closeWindows" type="checkbox"> Close other windows</label>
+  <div class="row"><label for="keepClassRegex">Keep windows</label><input id="keepClassRegex" type="text" placeholder="window class regex"></div>
+  <label class="check"><input id="keepAwake" type="checkbox"> Keep the screen awake in TV mode</label>
+
+  <div class="row" style="margin-top:12px"><span class="muted">Saved to ~/.config/caelestia/tvmode.json, shared with the Caelestia shell.</span><button id="refresh">Rescan</button></div>
+  <div id="status"></div>
+
+<script>
+let ws, uuid, actionInfo, settings = {}, outputs = [], saveTimer;
+const $ = (id) => document.getElementById(id);
+const textFields = ["tvAudioMatch", "steamCommand", "keepClassRegex"];
+const boolFields = ["closeWindows", "tvInDesktop", "keepAwake"];
+
+function toPlugin(payload) {
+  ws.send(JSON.stringify({ event: "sendToPlugin", action: actionInfo.action, context: uuid, payload }));
+}
+
+function status(text, cls) {
+  $("status").textContent = text;
+  $("status").className = cls || "";
+}
+
+function options(select, values, current, labels = {}) {
+  const list = [...values];
+  if (current && !list.includes(current)) list.unshift(current);
+  select.innerHTML = "";
+  for (const v of list) {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = labels[v] || v;
+    select.appendChild(o);
+  }
+  select.value = current;
+}
+
+function renderModes() {
+  const out = outputs.find((o) => o.name === $("tv").value);
+  options($("tvMode"), out ? out.modes : [], settings.tvMode);
+}
+
+function render() {
+  const labels = Object.fromEntries(outputs.map((o) => [o.name, o.description ? `${o.name} (${o.description.split(" ").slice(0, 3).join(" ")})` : o.name]));
+  options($("tv"), outputs.map((o) => o.name), settings.tv, labels);
+  renderModes();
+  $("tvScale").value = settings.tvScale;
+  for (const f of textFields) $(f).value = settings[f] ?? "";
+  for (const f of boolFields) $(f).checked = !!settings[f];
+
+  const names = [...new Set([...outputs.map((o) => o.name), ...(settings.desktopMonitors || [])])];
+  $("desktopMonitors").innerHTML = "";
+  for (const n of names) {
+    const l = document.createElement("label");
+    const c = document.createElement("input");
+    c.type = "checkbox";
+    c.value = n;
+    c.checked = (settings.desktopMonitors || []).includes(n);
+    c.addEventListener("change", save);
+    l.append(c, " ", labels[n] || n);
+    $("desktopMonitors").appendChild(l);
+  }
+  $("keepClassRegex").disabled = !settings.closeWindows;
+}
+
+function collect() {
+  const s = {
+    tv: $("tv").value,
+    tvMode: $("tvMode").value,
+    tvScale: parseFloat($("tvScale").value) || 1,
+    desktopMonitors: [...$("desktopMonitors").querySelectorAll("input:checked")].map((c) => c.value),
+  };
+  for (const f of textFields) s[f] = $(f).value.trim();
+  for (const f of boolFields) s[f] = $(f).checked;
+  return s;
+}
+
+function save() {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const s = collect();
+    if (!s.desktopMonitors.length) return status("Pick at least one desktop monitor.", "err");
+    if (s.desktopMonitors.includes(s.tv) && !s.tvInDesktop) return status("The TV can't also be a desktop monitor.", "err");
+    try { new RegExp(s.keepClassRegex); } catch { return status("Keep windows isn't a valid regex.", "err"); }
+    status("Saving…");
+    toPlugin({ event: "saveSettings", settings: s });
+  }, 300);
+}
+
+$("tv").addEventListener("change", () => { settings.tv = $("tv").value; renderModes(); save(); });
+for (const id of ["tvMode", "tvScale", ...boolFields]) $(id).addEventListener("change", () => {
+  if (id === "closeWindows") $("keepClassRegex").disabled = !$(id).checked;
+  save();
+});
+for (const id of textFields) $(id).addEventListener("input", save);
+$("refresh").addEventListener("click", () => { status("Scanning…"); toPlugin({ event: "getSettings" }); });
+
+window.connectElgatoStreamDeckSocket = (port, inUUID, registerEvent, _info, inActionInfo) => {
+  uuid = inUUID;
+  actionInfo = JSON.parse(inActionInfo);
+  ws = new WebSocket("ws://localhost:" + port);
+  ws.onopen = () => {
+    ws.send(JSON.stringify({ event: registerEvent, uuid }));
+    toPlugin({ event: "getSettings" });
+  };
+  ws.onmessage = (evt) => {
+    const msg = JSON.parse(evt.data);
+    if (msg.event !== "sendToPropertyInspector") return;
+    const p = msg.payload || {};
+    if (p.event === "settings") {
+      settings = p.settings;
+      outputs = p.outputs || [];
+      $("audioList").innerHTML = (p.audio || []).map((a) => `<option value="${a.replace(/"/g, "&quot;")}">`).join("");
+      render();
+      if ($("status").textContent === "Scanning…") status("");
+    } else if (p.event === "saved") {
+      settings = p.settings;
+      status("Saved", "ok");
+      setTimeout(() => $("status").textContent === "Saved" && status(""), 1500);
+    } else if (p.event === "error") {
+      status(p.message, "err");
+    }
+  };
+};
+</script>
+</body>
+</html>
