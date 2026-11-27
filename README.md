@@ -143,7 +143,7 @@ bind = SUPER ALT, D, exec, ~/.config/caelestia/plugins/tvmode/scripts/desktop-mo
 
 ### Stream Deck (optional)
 
-With [OpenDeck](https://github.com/nekename/OpenDeck) you can put TV Mode on a Stream Deck key: a toggle key, a key that shows the current mode, and the same settings in OpenDeck's side panel. See [`opendeck/`](opendeck/README.md).
+With [OpenDeck](https://github.com/nekename/OpenDeck) you can put TV Mode on a Stream Deck key: a toggle key, a key that shows the current mode, and a settings key with the same settings in OpenDeck's side panel. See [`opendeck/`](opendeck/README.md).
 
 ```bash
 ./opendeck/install.sh   # then restart OpenDeck

@@ -8,7 +8,7 @@
 const fs = require("fs");
 const path = require("path");
 const os = require("os");
-const { spawn } = require("child_process");
+const { spawn, execFile } = require("child_process");
 const tvSettings = require("./settings");
 
 const args = {};
@@ -47,6 +47,7 @@ function findScript(name) {
 
 const TOGGLE = "com.martijnhe.tvmode.toggle";
 const STATUS = "com.martijnhe.tvmode.status";
+const SETTINGS = "com.martijnhe.tvmode.settings";
 
 const contexts = new Map(); // context -> action UUID
 let mode = readMode();
@@ -82,10 +83,27 @@ ws.onmessage = (msg) => {
     toggle(context);
   } else if (event === "keyUp" && action === STATUS) {
     refresh(true);
+  } else if (event === "keyUp" && action === SETTINGS) {
+    openDashboard(context);
   } else if (event === "sendToPlugin") {
     handlePI(action, context, data.payload || {});
   }
 };
+
+// The settings key opens the Caelestia dashboard (where the TV tab lives), unless it's already open.
+function openDashboard(context) {
+  execFile("caelestia", ["shell", "drawers", "isOpen", "dashboard"], { timeout: 5000 }, (err, out) => {
+    if (err) {
+      console.error(`caelestia shell: ${err.message}`);
+      return send({ event: "showAlert", context });
+    }
+    if (out.trim() === "1") return send({ event: "showOk", context });
+    execFile("caelestia", ["shell", "drawers", "toggle", "dashboard"], { timeout: 5000 }, (e) => {
+      if (e) console.error(`caelestia shell: ${e.message}`);
+      send({ event: e ? "showAlert" : "showOk", context });
+    });
+  });
+}
 
 // Settings panel (property inspector) requests.
 async function handlePI(action, context, p) {
